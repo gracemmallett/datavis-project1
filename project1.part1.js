@@ -3,14 +3,16 @@
 
 var width = 700;
 var height = 500;
-var padding = 50;
-var barPadding = 40;
+var padding = 90;
+var barPadding = 10;
+var dataset;
+var xScale;
+var yScale;
 
 function main (dataset) {
   // Read in Breast Cancer Wisconsin dataset
   var thickness = [];
-  var dataset;
-  d3.csv("breast-cancer-wisconsin-short.csv", function(data){
+  d3.csv("breast-cancer-wisconsin.csv", function(data){
     dataset = data;
     data.map(function(d){
       thickness.push(parseInt(d.Thickness));
@@ -19,12 +21,12 @@ function main (dataset) {
   alert("reading in data")
 
   // Define xScale
-  var xScale = d3.scaleLinear()
+  xScale = d3.scaleLinear()
              .domain([0, d3.max(dataset, function(d) { return parseInt(d.Uniformity_Cell_Size); })])
              .range([padding, width]);
 
   // Define yScale 
-  var yScale = d3.scaleBand()
+  yScale = d3.scaleBand()
              .domain(thickness)
              .range([padding/2, height - padding]);
 
@@ -60,7 +62,40 @@ function makeAndLabelBarChart (svg, dataset, xScale, yScale, xAxis, yAxis) {
       return yScale(parseInt(d.Thickness));
      })
     .attr("height", yScale.bandwidth() - barPadding)
-    .attr("fill", "blue");
+    .attr("fill", "blue")
+    .on("mouseover", function(d) {
+
+    //Get this bar's x/y values, then augment for the tooltip
+    var xPosition = parseFloat(d3.select(this).attr("x")) / 2 + width / 2;
+    var yPosition = parseFloat(d3.select(this).attr("y")) + yScale.bandwidth();
+
+    //Update the tooltip position and value
+    d3.select("#tooltip")
+      .style("left", xPosition + "px")
+      .style("top", yPosition + "px")           
+      .select("#value")
+      .text(d);
+
+    //Show the tooltip
+    d3.select("#tooltip").classed("hidden", false);
+
+    })
+    .on("mouseout", function() {
+
+    //Hide the tooltip
+    d3.select("#tooltip").classed("hidden", true);
+
+    });
+
+  // call the ascend function 
+  document.getElementById("ascend").addEventListener("click", function(){
+    sortBarsAscending(svg)
+  })
+
+  // call the descend function
+  document.getElementById("descend").addEventListener("click", function(){
+    sortBarsDescending(svg)
+  })
 
   //Create X axis
   svg.append("g")
@@ -79,9 +114,9 @@ function makeAndLabelBarChart (svg, dataset, xScale, yScale, xAxis, yAxis) {
     .data(dataset)
     .enter()
     .append("text")
-    .text(function(d) {
-      return "(" + d.Uniformity_Cell_Size + "," + d.Thickness + ")";
-    })
+    // .text(function(d) {
+    //   return "(" + d.Uniformity_Cell_Size + "," + d.Thickness + ")";
+    // })
     .attr("x", function(d) {
       return xScale(d.Uniformity_Cell_Size);
     })
@@ -102,5 +137,30 @@ function makeSVG () {
   return svg
 }
 
+// sort the bars in  ascending order
+function sortBarsAscending (svg) {
+  svg.selectAll("rect")
+     .sort(function(a, b) {
+       return d3.ascending(parseInt(a.Uniformity_Cell_Size), parseInt(b.Uniformity_Cell_Size));
+      })
+     .transition()
+     .duration(1000)
+     .attr("y", function(d, i) {
+        return yScale(i);
+     });
+}
+
+// sort the bars in descending order
+function sortBarsDescending (svg) {
+  svg.selectAll("rect")
+     .sort(function(a, b) {
+       return d3.descending(parseInt(a.Uniformity_Cell_Size), parseInt(b.Uniformity_Cell_Size));
+      })
+     .transition()
+     .duration(1000)
+     .attr("y", function(d, i) {
+        return yScale(i);
+     });
+}
 
 main()
